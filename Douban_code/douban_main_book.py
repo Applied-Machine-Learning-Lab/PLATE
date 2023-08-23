@@ -5,21 +5,18 @@ import os
 import numpy as np
 from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader
-#from torchfm.dataset.movielens import MovieLens1MDataset, MovieLens20MDataset
 from dataset.douban import Douban, DoubanMusic, DoubanBook, DoubanMovie
 
 from pdfm_user_autodis_v2 import PromptDeepFactorizationMachineModel_user_autodis
 from pdfm_usermlp_v2 import PromptDeepFactorizationMachineModel_usermlp
 
-def get_dataset(name, path):
-    if name == 'douban':
-        return Douban()
-    elif name == 'douban_music':
-        return DoubanMusic(path)
+def get_dataset(name, mode):
+    if name == 'douban_music':
+        return DoubanMusic(mode)
     elif name == 'douban_book':
-        return DoubanBook(path)
+        return DoubanBook(mode)
     elif name == 'douban_movie':
-        return DoubanMovie(path)
+        return DoubanMovie(mode)
     else:
         raise ValueError('unknown dataset name: ' + name)
 
@@ -97,26 +94,21 @@ def main(dataset_name,
          freeze,
          job):
     device = torch.torch.device(device)
-    dataset = get_dataset(dataset_name, dataset_path)   
-    domain_id = np.full((dataset.items.shape[0],1),2)
-    dataset.items = np.concatenate([domain_id,dataset.items],1) 
     
-    train_length = int(len(dataset) * 0.8)
-    valid_length = int(len(dataset) * 0.1)
-    test_length = len(dataset) - train_length - valid_length
-    train_dataset, valid_dataset, test_dataset = torch.utils.data.random_split(
-        dataset, (train_length, valid_length, test_length),generator=torch.Generator().manual_seed(0))
-    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8)
+    train_dataset = get_dataset(dataset_name,'train')
+    valid_dataset = get_dataset(dataset_name,'val')
+    test_dataset = get_dataset(dataset_name,'test')
+
+    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8, shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8)
     test_data_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=8)
-    model = get_model(model_name, dataset).to(device)
+    
+    model = get_model(model_name, train_dataset).to(device)
     if mode=='test':
-        #model = torch.load(f'{save_dir}/{model_name}_v3_douban_train_{job}.pt')
         save_path=f'{save_dir}/{model_name}_v3_douban_train_{job}.pt'
         model.load_state_dict(torch.load(save_path))
     
     if "pdfm" in model_name or "prompt" in model_name:
-        model.domain_id = 2
         if freeze==2:
             model.Freeze2()
         elif freeze==3:
@@ -128,21 +120,6 @@ def main(dataset_name,
         #model.Freeze2()
     if model_name=='pdfm_user_autodis':
         model.autodis_model.temperature = tem
-    
-    model.phase = 2
-    param_count = 0
-    for name, param in model.named_parameters():
-        #print(param.shape)
-        if param.requires_grad:
-            print(name)
-            print(param.shape)
-            param_count += param.view(-1).size()[0]
-        if name == 'embedding_prompt.embedding.weight':
-            a=param
-    print(param_count)
-    
-    auc = test(model, test_data_loader, device)
-    print(f'test auc: {auc}')
     
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(params=model.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -160,26 +137,22 @@ def main(dataset_name,
             break
     
     end = time.time()
-    #checkpoint = torch.load(f'{save_dir}/{model_name}.pt.tar')
-    #model.load_state_dict(checkpoint['state_dict']) #fix the bug
+    
     save_path=f'{save_dir}/{model_name}_v3_{dataset_name}_{mode}_{job}_{freeze}.pt'
     model.load_state_dict(torch.load(save_path))
-    #model = torch.load(f'{save_dir}/{model_name}_douban_train.pt')
     
     auc = test(model, test_data_loader, device)
     print(f'test auc: {auc}')
-    #print(model.embedding_prompt.embedding.weight)
     print('running time = ',end - start)
-    #os.remove(f'{save_dir}/{model_name}_v3_{dataset_name}_{mode}_{job}_{freeze}.pt')
     
     
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_name', default='douban_book')
+    parser.add_argument('--dataset_name', default='douban_music',help='douban_music,douban_book,douban_movie')
     parser.add_argument('--dataset_path', default='dataset/')
-    parser.add_argument('--model_name', default='pdfm')
+    parser.add_argument('--model_name', default='pdfm_user_autodis')
     parser.add_argument('--mode', default='test')
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=5e-3)
@@ -188,7 +161,7 @@ if __name__ == '__main__':
     parser.add_argument('--tem', type=float, default=1e-5)
     parser.add_argument('--device', default='cuda:0',help='cpu, cuda:0')
     parser.add_argument('--save_dir', default='')
-    parser.add_argument('--freeze', type=int, default=5)
+    parser.add_argument('--freeze', type=int, default=5) # for prompt+linear combination
     parser.add_argument('--job', type=int, default=1)
     #args = parser.parse_args(args=[])
     args = parser.parse_args()
