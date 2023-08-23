@@ -10,8 +10,8 @@ from torch.utils.data import DataLoader
 from dataset.douban import Douban, DoubanMusic, DoubanBook, DoubanMovie
 
 
-from pdfm_user_autodis_v2 import PromptDeepFactorizationMachineModel_user_autodis
-from pdfm_usermlp_v2 import PromptDeepFactorizationMachineModel_usermlp
+from pdfm_fusion import PromptDeepFactorizationMachineModel_fusion
+from pdfm_gene import PromptDeepFactorizationMachineModel_gene
 
 def get_dataset(name, mode):
     return Douban(mode)
@@ -22,10 +22,10 @@ def get_model(name, dataset):
     """
     field_dims = dataset.field_dims
 
-    if name == 'pdfm_usermlp':
-        return PromptDeepFactorizationMachineModel_usermlp(field_dims, embed_dim=16, mlp_dims=(16, 16), dropout=0.2, domain_id=0)
-    elif name == 'pdfm_user_autodis':
-        return PromptDeepFactorizationMachineModel_user_autodis(field_dims, embed_dim=16, mlp_dims=(16, 16), dropout=0.2, domain_id=0, number=10, max_val=0.01, temperature=1e-5)
+    if name == 'pdfm_gene':
+        return PromptDeepFactorizationMachineModel_gene(field_dims, embed_dim=16, mlp_dims=(16, 16), dropout=0.2, domain_id=0)
+    elif name == 'pdfm_fusion':
+        return PromptDeepFactorizationMachineModel_fusion(field_dims, embed_dim=16, mlp_dims=(16, 16), dropout=0.2, domain_id=0, number=10, max_val=0.01, temperature=1e-5)
     else:
         raise ValueError('unknown model name: ' + name)
         
@@ -145,7 +145,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='douban')
     parser.add_argument('--dataset_path', default='dataset/')
-    parser.add_argument('--model_name', default='pdfm_user_autodis')
+    parser.add_argument('--model_name', default='pdfm_fusion')
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument('--batch_size', type=int, default=2048)
