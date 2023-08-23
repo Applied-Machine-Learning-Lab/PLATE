@@ -13,17 +13,8 @@ from dataset.douban import Douban, DoubanMusic, DoubanBook, DoubanMovie
 from pdfm_user_autodis_v2 import PromptDeepFactorizationMachineModel_user_autodis
 from pdfm_usermlp_v2 import PromptDeepFactorizationMachineModel_usermlp
 
-def get_dataset(name, path):
-    if name == 'douban':
-        return Douban()
-    elif name == 'douban_music':
-        return DoubanMusic(path)
-    elif name == 'douban_book':
-        return DoubanBook(path)
-    elif name == 'douban_movie':
-        return DoubanMovie(path)
-    else:
-        raise ValueError('unknown dataset name: ' + name)
+def get_dataset(name, mode):
+    return Douban(mode)
 
 def get_model(name, dataset):
     """
@@ -96,80 +87,26 @@ def main(dataset_name,
          save_dir,
          job):
     device = torch.torch.device(device)
-    dataset_name = ['douban_music','douban_book','douban_movie']
-    ########## first split, then combine data from different domains #####################
-    for i in range (len(dataset_name)):
-        
-        dataset_on = get_dataset(dataset_name[i], dataset_path+'/'+dataset_name[i]+'/ratings.dat')
-        domain_id = np.full((dataset_on.items.shape[0],1),0)
-        dataset_on.items = np.concatenate([domain_id,dataset_on.items],1) 
-        
-        train_length = int(len(dataset_on) * 0.8)
-        valid_length = int(len(dataset_on) * 0.1)
-        test_length = len(dataset_on) - train_length - valid_length
-        #torch.manual_seed(0)
-        train_dataset_on, valid_dataset_on, test_dataset_on = torch.utils.data.random_split(dataset_on, (train_length, valid_length, test_length),generator=torch.Generator().manual_seed(0))
-        if i==0:
-            dataset = copy.deepcopy(dataset_on) #must be deepcopy
-            train_dataset = copy.deepcopy(dataset)
-            valid_dataset = copy.deepcopy(dataset)
-            test_dataset = copy.deepcopy(dataset)
-            train_dataset.items = dataset_on.items[train_dataset_on.indices,:] #the indices contains the random index
-            train_dataset.targets = dataset_on.targets[train_dataset_on.indices]
-            valid_dataset.items = dataset_on.items[valid_dataset_on.indices,:]
-            valid_dataset.targets = dataset_on.targets[valid_dataset_on.indices]
-            test_dataset.items = dataset_on.items[test_dataset_on.indices,:]
-            test_dataset.targets = dataset_on.targets[test_dataset_on.indices]
-            
-        else:
-            #dataset = dataset + dataset_on
-            train_dataset.items = np.concatenate((train_dataset.items, dataset_on.items[train_dataset_on.indices,:]), axis=0)
-            train_dataset.targets = np.concatenate((train_dataset.targets, dataset_on.targets[train_dataset_on.indices]), axis=0)
-            #print(dataset.items.shape)
-            
-            valid_dataset.items = np.concatenate((valid_dataset.items, dataset_on.items[valid_dataset_on.indices,:]), axis=0)
-            valid_dataset.targets = np.concatenate((valid_dataset.targets, dataset_on.targets[valid_dataset_on.indices]), axis=0)
-            
-            test_dataset.items = np.concatenate((test_dataset.items, dataset_on.items[test_dataset_on.indices,:]), axis=0)
-            test_dataset.targets = np.concatenate((test_dataset.targets, dataset_on.targets[test_dataset_on.indices]), axis=0)
-            
-            dataset.items = np.concatenate((dataset.items, dataset_on.items), axis=0)
-            dataset.targets = np.concatenate((dataset.targets, dataset_on.targets), axis=0)
     
-    dataset.field_dims[0] = 2718 #specific number for douban
-    dataset.field_dims[1] = 5567 + 6777 + 9565
-    
-    train_dataset.field_dims[0] = 2718
-    train_dataset.field_dims[1] = 5567 + 6777 + 9565
-    valid_dataset.field_dims[0] = 2718
-    valid_dataset.field_dims[1] = 5567 + 6777 + 9565
-    test_dataset.field_dims[0] = 2718
-    test_dataset.field_dims[1] = 5567 + 6777 + 9565
-        
-    #dataset = get_dataset(dataset_name, dataset_path+'/'+dataset_name[i]+'/ratings.dat') 
+    train_dataset = get_dataset(dataset_name, 'train')
+    valid_dataset = get_dataset(dataset_name, 'val')
+    test_dataset = get_dataset(dataset_name, 'test')
     
     train_data_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=8,shuffle=True)
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8)
     test_data_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=8)
+    
     model = get_model(model_name, dataset).to(device)
     
     if "pdfm" in model_name or "prompt" in model_name:
         model.Freeze1()
     
-    #print(model.autodis_model.meta_embedding)
-    
-    #for name, param in model.named_parameters():
-    #        print(name)
-    
     param_count = 0
     for name, param in model.named_parameters():
-        #print(param.shape)
         if not param.requires_grad:
             print(name)
             print(param.shape)
             param_count += param.view(-1).size()[0]
-        #if name == 'embedding_prompt.embedding.weight':
-        #    print(param)
     print(param_count)
     
     param_count = 0
@@ -195,8 +132,6 @@ def main(dataset_name,
             break
     
     end = time.time()
-    #checkpoint = torch.load(f'{save_dir}/{model_name}.pt.tar')
-    #model.load_state_dict(checkpoint['state_dict']) #fix the bug
     
     model.load_state_dict(torch.load(save_path))
     auc = test(model, test_data_loader, device)
@@ -208,7 +143,7 @@ if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_name', default=['douban_music','douban_book','douban_movie'])
+    parser.add_argument('--dataset_name', default='douban')
     parser.add_argument('--dataset_path', default='dataset/')
     parser.add_argument('--model_name', default='pdfm_user_autodis')
     parser.add_argument('--epoch', type=int, default=100)
