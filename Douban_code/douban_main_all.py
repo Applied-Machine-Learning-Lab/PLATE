@@ -96,7 +96,7 @@ def main(dataset_name,
     valid_data_loader = DataLoader(valid_dataset, batch_size=batch_size, num_workers=8)
     test_data_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=8)
     
-    model = get_model(model_name, dataset).to(device)
+    model = get_model(model_name, train_dataset).to(device)
     
     if "pdfm" in model_name or "prompt" in model_name:
         model.Freeze1()
