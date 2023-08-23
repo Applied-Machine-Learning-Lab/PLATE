@@ -7,8 +7,8 @@ from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader
 from dataset.douban import Douban, DoubanMusic, DoubanBook, DoubanMovie
 
-from pdfm_user_autodis_v2 import PromptDeepFactorizationMachineModel_user_autodis
-from pdfm_usermlp_v2 import PromptDeepFactorizationMachineModel_usermlp
+from pdfm_fusion import PromptDeepFactorizationMachineModel_fusion
+from pdfm_gene import PromptDeepFactorizationMachineModel_gene
 
 def get_dataset(name, mode):
     if name == 'douban_music':
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', default='douban_music',help='douban_music,douban_book,douban_movie')
     parser.add_argument('--dataset_path', default='dataset/')
-    parser.add_argument('--model_name', default='pdfm_user_autodis')
+    parser.add_argument('--model_name', default='pdfm_fusion')
     parser.add_argument('--mode', default='test')
     parser.add_argument('--epoch', type=int, default=100)
     parser.add_argument('--learning_rate', type=float, default=5e-3)
