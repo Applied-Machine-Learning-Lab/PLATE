@@ -160,7 +160,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-5)
     parser.add_argument('--tem', type=float, default=1e-5)
     parser.add_argument('--device', default='cuda:0',help='cpu, cuda:0')
-    parser.add_argument('--save_dir', default='')
+    parser.add_argument('--save_dir', default='.')
     parser.add_argument('--freeze', type=int, default=5) # for prompt+linear combination
     parser.add_argument('--job', type=int, default=1)
     #args = parser.parse_args(args=[])
