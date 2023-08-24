@@ -13,7 +13,7 @@ class Douban(torch.utils.data.Dataset):
         https://github.com/FengZhu-Joey/GA-DTCDR/tree/main/Data
     """
 
-    def __init__(self, mode, path_base='/Douban/dataset/'):
+    def __init__(self, mode, path_base='./dataset/'):
         #mode: train / val / test
         dataset_name = ['douban_music', 'douban_book', 'douban_movie']
         path = path_base + dataset_name[0] + '_' + mode + '.csv'
@@ -37,7 +37,7 @@ class Douban(torch.utils.data.Dataset):
 
 class DoubanMusic(torch.utils.data.Dataset):
 
-    def __init__(self, mode, path_base='/Douban/dataset/'):
+    def __init__(self, mode, path_base='./dataset/'):
         #mode: train / val / test
         dataset_name = ['douban_music']
         path = path_base + dataset_name[0] + '_' + mode + '.csv'
@@ -56,7 +56,7 @@ class DoubanMusic(torch.utils.data.Dataset):
 
 class DoubanBook(torch.utils.data.Dataset):
 
-    def __init__(self, mode, path_base='/Douban/dataset/'):
+    def __init__(self, mode, path_base='./dataset/'):
         #mode: train / val / test
         dataset_name = ['douban_book']
         path = path_base + dataset_name[0] + '_' + mode + '.csv'
